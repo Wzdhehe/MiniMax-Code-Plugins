@@ -215,15 +215,27 @@ you already obtained a valid ID from that backend outside this Plugin.
 
 ## Verification
 
-Run the dependency-free fake-backend suites from the repository root:
+The default repository `npm run check` runs the deterministic process-tracker fixtures and
+workspace-lock tests. Full server integration tests live outside Node's automatic test discovery
+and run in `.github/workflows/cli-agent-bridge-windows.yml` on Windows, the supported production
+containment platform. Plugin, workflow, and root package changes trigger that job.
+
+Run all dependency-free fake-backend suites explicitly from the repository root:
 
 ```text
-node --test plugins/Hylouis233/cli-agent-bridge/test/server.test.mjs
-node --test plugins/Hylouis233/cli-agent-bridge/tests/server.test.mjs
+node --test plugins/Hylouis233/cli-agent-bridge/integration/stdio.mjs
+node --test plugins/Hylouis233/cli-agent-bridge/integration/server.mjs
+node --test plugins/Hylouis233/cli-agent-bridge/tests/process-tree.test.mjs
 node --test plugins/Hylouis233/cli-agent-bridge/tests/workspace-lock.test.mjs
 ```
 
-They cover the full MCP flow plus in-process and cross-process canonical worktree locking, stale
+Explicit POSIX integration runs remain experimental: they opt into the unsupported polling
+tracker and may correctly quarantine when short-lived parent/child identities cannot be captured
+under load. They are diagnostic runs, not a required repository CI gate. No integration assertions
+are removed or relaxed; Windows still executes the complete suite, subject to its existing
+platform-specific skips.
+
+The suites cover the full MCP flow plus in-process and cross-process canonical worktree locking, stale
 owner compare-and-swap, live-owner non-steal, quarantined-lease recovery after an explicit
 operator approval rename, interruptible lease state updates, shared quarantine markers, queued and
 discovery-phase cancellation (including list_backends probes), overall deadlines, cancel/timeout
@@ -238,3 +250,12 @@ capture truncation, and Codex prompt delimiters on Windows and POSIX.
 ## License
 
 MIT. See LICENSE. Upstream credits: see NOTICE.
+
+### Process-tracker regression coverage
+
+The internal Linux tracker tests bind each newly visible child to its start identity while its
+original parent can still be revalidated, before enumerating the parent's remaining tasks.
+This preserves evidence for short-lived Git helpers without accepting unknown descendants or
+children of a recycled parent PID. Pending children without verifiable identities still fail
+closed. This test-path improvement does not enable Linux production delegation; the supported
+kernel containment boundary remains Windows Job Objects.
